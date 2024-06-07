@@ -91,7 +91,7 @@ app.post("/v1/chat/completions", async (req, res) => {
       user: "apiuser",
       bot_id: bot_id,
       chat_history: chatHistory,
-      "custom_variables": {
+      custom_variables: {
         "system_prompt": systemPrompt
       }
     };
