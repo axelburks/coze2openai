@@ -62,16 +62,20 @@ app.post("/v1/chat/completions", async (req, res) => {
     const messages = data.messages;
     const model = data.model;
     const chatHistory = [];
+    let systemPrompt = "";
     for (let i = 0; i < messages.length - 1; i++) {
       const message = messages[i];
       const role = message.role;
       const content = message.content;
-      
-      chatHistory.push({
-        role: role,
-        content: content,
-        content_type: "text"
-      });
+      if (role == "system") {
+        systemPrompt = content;
+      } else {
+        chatHistory.push({
+          role: role,
+          content: content,
+          content_type: "text"
+        });
+      }
     }
 
     const lastMessage = messages[messages.length - 1];
@@ -86,7 +90,10 @@ app.post("/v1/chat/completions", async (req, res) => {
       conversation_id: "",
       user: "apiuser",
       bot_id: bot_id,
-      chat_history: chatHistory
+      chat_history: chatHistory,
+      "custom_variables": {
+        "system_prompt": systemPrompt
+      }
     };
     const coze_api_url = `https://${coze_api_base}/open_api/v2/chat`;
     const resp = await fetch(coze_api_url, {
