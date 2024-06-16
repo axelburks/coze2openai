@@ -61,6 +61,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const data = req.body;
     const messages = data.messages;
     const model = data.model;
+    const user = data.user !== undefined ? data.user : "apiuser";
     const chatHistory = [];
     let systemPrompt = "";
     for (let i = 0; i < messages.length - 1; i++) {
@@ -88,7 +89,7 @@ app.post("/v1/chat/completions", async (req, res) => {
       query: queryString,
       stream: stream,
       conversation_id: "",
-      user: "apiuser",
+      user: user,
       bot_id: bot_id,
       chat_history: chatHistory,
       "custom_variables": {
@@ -184,12 +185,21 @@ app.post("/v1/chat/completions", async (req, res) => {
             res.end();
           } else if (chunkObj.event === "ping") {
           } else if (chunkObj.event === "error") {
-            console.error(`Error: ${chunkObj.code}, ${chunkObj.message}`);
-            res
-              .status(500)
-              .write(
-                `data: ${JSON.stringify({ error: chunkObj.message })}\n\n`
-              );
+            let errorMsg = chunkObj.code + " " + chunkObj.message;
+
+            if(chunkObj.error_information) {
+              errorMsg = chunkObj.error_information.err_msg;
+            }
+
+            console.error('Error: ', errorMsg);
+
+            res.write(
+                    `data: ${JSON.stringify({ error: {
+                        error: "Unexpected response from Coze API.",
+                        message: errorMsg
+                      }
+                    })}\n\n`
+                );
             res.write("data: [DONE]\n\n");
             res.end();
           }
@@ -244,9 +254,14 @@ app.post("/v1/chat/completions", async (req, res) => {
               res.status(500).json({ error: "No answer message found." });
             }
           } else {
+            console.error("Error:", data.msg);
             res
               .status(500)
-              .json({ error: "Unexpected response from Coze API." });
+              .json({ error: {
+                    error: "Unexpected response from Coze API.",
+                    message: data.msg
+                }
+              });
           }
         })
         .catch((error) => {
@@ -259,4 +274,7 @@ app.post("/v1/chat/completions", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT || 3000);
+const server = app.listen(process.env.PORT || 3000, function () {
+  let port = server.address().port
+  console.log('Ready! Listening all IP, port: %s. Example: at http://localhost:%s', port, port)
+});
